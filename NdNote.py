@@ -80,6 +80,57 @@ def do_popup(event):
         m.grab_release()
 
 
+def hide_controls():
+    frame_topTab1.pack_forget()
+    btn_openFile.pack_forget()
+    btn_saveFile.pack_forget()
+    btn_listDirs.pack_forget()
+    btn_textSizeIncrease.pack_forget()
+    btn_textSizeDecrease.pack_forget()
+    root.overrideredirect(True)
+
+
+def show_controls():
+    frame_topTab1.pack(fill=tk.BOTH)
+    btn_openFile.pack(side=tk.LEFT, padx=10, pady=5, anchor='ne')
+    btn_saveFile.pack(side=tk.LEFT, padx=10, pady=5, anchor='ne')
+    btn_listDirs.pack(side=tk.LEFT, padx=10, pady=5, anchor='ne')
+    btn_textSizeIncrease.pack(side=tk.RIGHT, padx=5, pady=5, anchor='ne')
+    btn_textSizeDecrease.pack(side=tk.RIGHT, padx=0, pady=5, anchor='ne')
+    txt_main.pack_forget()
+    txt_main.pack(side=tk.LEFT, fill=tk.BOTH, expand=tk.YES, padx=10, pady=10, anchor='e')
+    root.overrideredirect(False)
+
+
+def start_drag(event):
+    global is_dragging
+    is_dragging = True
+    x, y = root.winfo_pointerxy()
+    root._offsetx = x - root.winfo_x()
+    root._offsety = y - root.winfo_y()
+
+
+def move(event):
+    global is_dragging
+    if is_dragging:
+        x, y = root.winfo_pointerxy()
+        root.geometry(f"+{x - root._offsetx}+{y - root._offsety}")
+
+
+def stop_drag(event):
+    global is_dragging
+    is_dragging = False
+
+
+# Define a function for resizing the window
+def move_mouse_button(event):
+    start_drag(event)
+    move(event)
+    stop_drag(event)
+    x, y = root.winfo_pointerxy()
+    root.geometry(f"+{x - root._offsetx}+{y - root._offsety}")
+
+
 def norm_image(image_input):
     image = image_input
 
@@ -174,7 +225,7 @@ def activate_image_processing():
         frame_threshold_a.pack(fill=tk.BOTH)
         frame_threshold_b.pack(fill=tk.BOTH)
         frame_blur.pack(fill=tk.BOTH)
-        container_normalized.pack(fill=tk.BOTH)
+        container_normalized.pack(side=tk.RIGHT, fill=tk.BOTH, expand=tk.YES, padx=10, pady=10, anchor='e')
     else:
         ch_normalize.pack_forget()
         var_normalize.set(0)
@@ -204,13 +255,13 @@ def activate_normalize():
         normalize_scale2.pack(side=tk.LEFT, padx=10, pady=5)
         frame_normalize.pack(fill=tk.BOTH)
         container_normalized.pack_forget()
-        container_normalized.pack(fill=tk.BOTH)
+        container_normalized.pack(side=tk.RIGHT, fill=tk.BOTH, expand=tk.YES, padx=10, pady=10, anchor='e')
     else:
         normalize_scale1.pack_forget()
         normalize_scale2.pack_forget()
         frame_normalize.pack_forget()
         container_normalized.pack_forget()
-        container_normalized.pack(fill=tk.BOTH)
+        container_normalized.pack(side=tk.RIGHT, fill=tk.BOTH, expand=tk.YES, padx=10, pady=10, anchor='e')
 
 
 def activate_var_threshold():
@@ -222,7 +273,7 @@ def activate_var_threshold():
         frame_threshold_a.pack(fill=tk.BOTH)
         frame_threshold_b.pack(fill=tk.BOTH)
         container_normalized.pack_forget()
-        container_normalized.pack(fill=tk.BOTH)
+        container_normalized.pack(side=tk.RIGHT, fill=tk.BOTH, expand=tk.YES, padx=10, pady=10, anchor='e')
     else:
         threshold_label.pack_forget()
         threshold_dropdown.pack_forget()
@@ -231,7 +282,7 @@ def activate_var_threshold():
         frame_threshold_a.pack_forget()
         frame_threshold_b.pack_forget()
         container_normalized.pack_forget()
-        container_normalized.pack(fill=tk.BOTH)
+        container_normalized.pack(side=tk.RIGHT, fill=tk.BOTH, expand=tk.YES, padx=10, pady=10, anchor='e')
 
 
 def activate_var_blur():
@@ -239,12 +290,12 @@ def activate_var_blur():
         blur_scale.pack(side=tk.LEFT, padx=10, pady=5)
         frame_blur.pack(fill=tk.BOTH)
         container_normalized.pack_forget()
-        container_normalized.pack(fill=tk.BOTH)
+        container_normalized.pack(side=tk.RIGHT, fill=tk.BOTH, expand=tk.YES, padx=10, pady=10, anchor='e')
     else:
         blur_scale.pack_forget()
         frame_blur.pack_forget()
         container_normalized.pack_forget()
-        container_normalized.pack(fill=tk.BOTH)
+        container_normalized.pack(side=tk.RIGHT, fill=tk.BOTH, expand=tk.YES, padx=10, pady=10, anchor='e')
 
 
 past = 1
@@ -268,39 +319,70 @@ def handle_threshold_selection(selection):
 
 
 root = tk.Tk()
-font_style = tk_font.Font(family="Courier New", size=14)
+font_style = tk_font.Font(family="Consolas", size=12)
+# font_style = tk_font.Font(family="Courier New", size=14)
+
 root.title("NdNote (developed by Neven Dujmovic)")
-root.geometry("500x500+1200+100")
+root.geometry("500x500+50+50")
 root.attributes('-topmost', True)
+
+style = ttk.Style()
+
+COLOR_NOTEBOOK = "#87CEEB"
+TAB_COLOR = "#0072a0"
+TAB_SELECTED = "#0072a0"
+TEXT_AREA = "#FFFFFF"
+TEXT_AREA_FONT = "#000000"
+
+style.theme_create("custom", parent="alt", settings={
+    "TScrollbar": {"configure": {"background": COLOR_NOTEBOOK, "relief": "flat"}},
+    "TNotebook": {"configure": {"background": COLOR_NOTEBOOK}},
+    "TFrame": {"configure": {"background": COLOR_NOTEBOOK}},
+    "TNotebook.Tab": {
+        "configure": {"background": TAB_COLOR, "foreground": "white"},
+        "map": {"background": [("selected", TAB_SELECTED)],
+                "expand": [("selected", [1, 1, 1, 0])]}}})
+
+style.theme_use("custom")
 
 tab_parent = ttk.Notebook(root)
 
+tab_parent.bind('<B1-Motion>', move)  # Bind the motion event to move the window
+tab_parent.bind('<ButtonPress-1>', start_drag)  # Bind the button press event to start dragging
+tab_parent.bind('<ButtonRelease-1>', stop_drag)  # Bind the button release event to stop dragging
+
 # Tab 1: Text
 tab1 = ttk.Frame(tab_parent)
-tab_parent.add(tab1, text="Text")
+tab_parent.add(tab1, text="    Text    ")
 
-frame_topTab1 = tk.Frame(tab1)
+frame_topTab1 = tk.Frame(tab1, bg=COLOR_NOTEBOOK)
 frame_topTab1.pack(fill=tk.BOTH)
 
-btn_openFile = tk.Button(frame_topTab1, text='File Open', bd='5', command=open_text_file)
+# Add the gripper for resizing the window
+grip = ttk.Sizegrip()
+grip.place(relx=1.0, rely=1.0, anchor="se")
+grip.lift(frame_topTab1)
+grip.bind("<B1-Motion>", move_mouse_button)
+
+btn_openFile = tk.Button(frame_topTab1, text='File Open', relief='flat', command=open_text_file)
 btn_openFile.pack(side=tk.LEFT, padx=10, pady=5, anchor='ne')
 
-btn_saveFile = tk.Button(frame_topTab1, text='File Save', bd='5', command=save_text_file)
+btn_saveFile = tk.Button(frame_topTab1, text='File Save', relief='flat', command=save_text_file)
 btn_saveFile.pack(side=tk.LEFT, padx=10, pady=5, anchor='ne')
 
-btn_listDirs = tk.Button(frame_topTab1, text='List Dirs & Files', bd='5', command=list_dirs_file)
+btn_listDirs = tk.Button(frame_topTab1, text='List Dirs & Files', relief='flat', command=list_dirs_file)
 btn_listDirs.pack(side=tk.LEFT, padx=10, pady=5, anchor='ne')
 
-btn_textSizeIncrease = tk.Button(frame_topTab1, text='<+>', bd='5', command=increase_text_font)
+btn_textSizeIncrease = tk.Button(frame_topTab1, text='<+>',relief='flat', command=increase_text_font)
 btn_textSizeIncrease.pack(side=tk.RIGHT, padx=5, pady=5, anchor='ne')
 
-btn_textSizeDecrease = tk.Button(frame_topTab1, text='>-<', bd='5', command=decrease_text_font)
+btn_textSizeDecrease = tk.Button(frame_topTab1, text='>-<', relief='flat', command=decrease_text_font)
 btn_textSizeDecrease.pack(side=tk.RIGHT, padx=0, pady=5, anchor='ne')
 
-txt_main = tk.Text(tab1, height=20, width=100, bg='#ffffff', fg='#000000', font=font_style, wrap=tk.WORD)
+txt_main = tk.Text(tab1, height=20, width=100, bg=TEXT_AREA, fg=TEXT_AREA_FONT, font=font_style, wrap=tk.WORD)
 txt_main.pack(side=tk.LEFT, fill=tk.BOTH, expand=tk.YES, padx=10, pady=10, anchor='e')
 
-y_scrollbar = tk.Scrollbar(tab1, orient=tk.VERTICAL, command=txt_main.yview)
+y_scrollbar = tk.Scrollbar(txt_main, orient=tk.VERTICAL, command=txt_main.yview)
 y_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 txt_main["yscrollcommand"] = y_scrollbar.set
 
@@ -309,27 +391,39 @@ m.add_command(label="Cut", command=lambda: root.focus_get().event_generate("<<Cu
 m.add_command(label="Copy", command=lambda: root.focus_get().event_generate("<<Copy>>"))
 m.add_command(label="Paste", command=lambda: root.focus_get().event_generate("<<Paste>>"))
 m.add_separator()
+m.add_command(label="File Open", command=open_text_file)
+m.add_command(label="File Save", command=save_text_file)
+m.add_command(label="List Dirs & Files", command=list_dirs_file)
+m.add_separator()
 m.add_command(label="Select All", command=lambda: root.focus_get().event_generate("<<SelectAll>>"))
+m.add_separator()
+m.add_command(label="Hide Controls", command=hide_controls)
+m.add_command(label="Show Controls", command=show_controls)
+m.add_separator()
+m.add_command(label="Font++", command=increase_text_font)
+m.add_command(label="Font--", command=decrease_text_font)
+m.add_separator()
+m.add_command(label="Exit", command=root.destroy)
 
 txt_main.bind("<Button-3>", do_popup)
 
 # Tab 2: Image
 tab2 = ttk.Frame(tab_parent)
-tab_parent.add(tab2, text="Image")
+tab_parent.add(tab2, text="    Image    ")
 
-frame_topTab2 = tk.Frame(tab2)
+frame_topTab2 = tk.Frame(tab2, bg=COLOR_NOTEBOOK)
 frame_topTab2.pack(fill=tk.BOTH)
 
-btn_openFile = tk.Button(frame_topTab2, text='File Open', bd='5', command=open_image_file)
-btn_openFile.pack(side=tk.LEFT, padx=10, pady=5, anchor='ne')
+btn_open_image = tk.Button(frame_topTab2, text='Open image', relief='flat', command=open_image_file)
+btn_open_image.pack(side=tk.LEFT, padx=10, pady=5, anchor='ne')
+
+btn_paste = tk.Button(frame_topTab2, text="Paste image", relief='flat', command=paste_image)
+btn_paste.pack(side=tk.LEFT, padx=10, pady=5, anchor='ne')
 
 var_extract_text = tk.IntVar()
-ch_extract_text = tk.Checkbutton(frame_topTab2, text='Convert Image to Text', variable=var_extract_text, onvalue=1,
-                                 offvalue=0)
-ch_extract_text.pack(side=tk.LEFT, anchor='ne')
-
-btn_paste = tk.Button(frame_topTab2, text="Paste image", command=paste_image)
-btn_paste.pack(side=tk.RIGHT, padx=20, pady=5, anchor='ne')
+ch_extract_text = tk.Checkbutton(frame_topTab2, text='Extract text from the image', variable=var_extract_text, onvalue=1,
+                                 offvalue=0, bg=COLOR_NOTEBOOK)
+ch_extract_text.pack(side=tk.RIGHT, anchor='ne')
 
 container = ttk.Frame(tab2)
 canvas = tk.Canvas(container)
@@ -352,47 +446,41 @@ scrollbar_Y.pack(side=tk.LEFT, fill=tk.Y)
 
 # Tab 3: Image preprocessing
 tab3 = ttk.Frame(tab_parent)
-tab_parent.add(tab3, text="Image preprocessing")
+tab_parent.add(tab3, text="    Image preprocessing    ")
 
-frame_image_processing = tk.Frame(tab3)
+frame_image_processing = tk.Frame(tab3, bg=COLOR_NOTEBOOK)
 frame_image_processing.pack(fill=tk.BOTH)
 
 var_image_processing = tk.IntVar()
 ch_image_processing = tk.Checkbutton(frame_image_processing, text='Image preprocessing', variable=var_image_processing,
-                                     onvalue=1, offvalue=0, command=activate_image_processing)
+                                     onvalue=1, offvalue=0, bg=COLOR_NOTEBOOK, command=activate_image_processing)
 ch_image_processing.pack(side=tk.LEFT, anchor='ne')
 
 var_normalize = tk.IntVar()
 ch_normalize = tk.Checkbutton(frame_image_processing, text='Normalize', variable=var_normalize, onvalue=1, offvalue=0,
-                              command=activate_normalize)
-# ch_normalize.pack(side=tk.LEFT, anchor='ne')
+                              bg=COLOR_NOTEBOOK, command=activate_normalize)
 
 var_threshold = tk.IntVar()
 ch_threshold = tk.Checkbutton(frame_image_processing, text='Threshold', variable=var_threshold, onvalue=1, offvalue=0,
-                              command=activate_var_threshold)
-# ch_threshold.pack(side=tk.LEFT, anchor='ne')
+                              bg=COLOR_NOTEBOOK, command=activate_var_threshold)
 
 var_blur = tk.IntVar()
 ch_blur = tk.Checkbutton(frame_image_processing, text='Blur', variable=var_blur, onvalue=1, offvalue=0,
-                         command=activate_var_blur)
-# ch_blur.pack(side=tk.LEFT, anchor='ne')
+                         bg=COLOR_NOTEBOOK, command=activate_var_blur)
 
 var_gray = tk.IntVar()
-ch_gray = tk.Checkbutton(frame_image_processing, text='Grayscale', variable=var_gray, onvalue=1, offvalue=0)
-# ch_gray.pack(side=tk.LEFT, anchor='ne')
+ch_gray = tk.Checkbutton(frame_image_processing, text='Grayscale', variable=var_gray, onvalue=1, offvalue=0, bg=COLOR_NOTEBOOK)
 
-frame_normalize = tk.Frame(tab3)
+frame_normalize = tk.Frame(tab3, bg=COLOR_NOTEBOOK)
 frame_normalize.pack(fill=tk.BOTH)
 
-normalize_scale1 = tk.Scale(frame_normalize, from_=0, to=100, orient=tk.HORIZONTAL, length=200, label="Normalize alpha")
+normalize_scale1 = tk.Scale(frame_normalize, from_=0, to=100, orient=tk.HORIZONTAL, length=200, borderwidth=8, label="Normalize alpha", bg=COLOR_NOTEBOOK)
 normalize_scale1.set(0)
-# normalize_scale1.pack(side=tk.LEFT, padx=10, pady=5)
 
-normalize_scale2 = tk.Scale(frame_normalize, from_=0, to=255, orient=tk.HORIZONTAL, length=200, label="Normalize beta")
+normalize_scale2 = tk.Scale(frame_normalize, from_=0, to=255, orient=tk.HORIZONTAL, length=200, borderwidth=8, label="Normalize beta", bg=COLOR_NOTEBOOK)
 normalize_scale2.set(255)
-# normalize_scale2.pack(side=tk.LEFT, padx=10, pady=5)
 
-frame_threshold_a = tk.Frame(tab3)
+frame_threshold_a = tk.Frame(tab3, bg=COLOR_NOTEBOOK)
 frame_threshold_a.pack(fill=tk.BOTH)
 
 # Dropdown variable
@@ -400,34 +488,29 @@ selected_threshold_option = tk.StringVar()
 selected_threshold_option.set("--")  # Set pre-selected value
 
 # Label for the dropdown
-threshold_label = tk.Label(frame_threshold_a, text="Select a type of threshold:")
-# threshold_label.pack(side=tk.LEFT, padx=10, pady=5)
+threshold_label = tk.Label(frame_threshold_a, text="Select a type of threshold:", bg=COLOR_NOTEBOOK)
 
 # Dropdown control
 threshold_dropdown = tk.OptionMenu(frame_threshold_a, selected_threshold_option, "--", "Regular", "Adaptive",
                                    command=handle_threshold_selection)
-# threshold_dropdown.pack(side=tk.LEFT, padx=10, pady=5)
 
-frame_threshold_b = tk.Frame(tab3)
+frame_threshold_b = tk.Frame(tab3, bg=COLOR_NOTEBOOK)
 frame_threshold_b.pack(fill=tk.BOTH)
 
-threshold_scale = tk.Scale(frame_threshold_b, from_=0, to=255, orient=tk.HORIZONTAL, length=200,
-                           label="Threshold Scale")
+threshold_scale = tk.Scale(frame_threshold_b, from_=0, to=255, orient=tk.HORIZONTAL, length=200, bg=COLOR_NOTEBOOK,
+                           borderwidth=8, label="Threshold Scale")
 threshold_scale.set(100)
-# threshold_scale.pack(side=tk.LEFT, padx=10, pady=5)
 
-threshold_max_scale = tk.Scale(frame_threshold_b, from_=0, to=255, orient=tk.HORIZONTAL, length=200,
-                               label="Threshold Max Scale")
+threshold_max_scale = tk.Scale(frame_threshold_b, from_=0, to=255, orient=tk.HORIZONTAL, length=200, bg=COLOR_NOTEBOOK,
+                               borderwidth=8, label="Threshold Max Scale")
 threshold_max_scale.set(255)
-# threshold_max_scale.pack(side=tk.LEFT, padx=10, pady=5)
 
-frame_blur = tk.Frame(tab3)
+frame_blur = tk.Frame(tab3, bg=COLOR_NOTEBOOK)
 frame_blur.pack(fill=tk.BOTH)
 
-blur_scale = tk.Scale(frame_blur, from_=1, to=55, command=odd_fix, orient=tk.HORIZONTAL, length=200,
-                      label="Blur Kernel Size")
+blur_scale = tk.Scale(frame_blur, from_=1, to=55, command=odd_fix, orient=tk.HORIZONTAL, length=200, bg=COLOR_NOTEBOOK,
+                      borderwidth=8, label="Blur Kernel Size")
 blur_scale.set(1)
-# blur_scale.pack(side=tk.LEFT, padx=10, pady=5)
 
 container_normalized = ttk.Frame(tab3)
 canvas_normalized = tk.Canvas(container_normalized)
@@ -446,6 +529,7 @@ lblNormalized.pack()
 
 container_normalized.pack(side=tk.RIGHT, fill=tk.BOTH, expand=tk.YES, padx=10, pady=10, anchor='e')
 canvas_normalized.pack(side=tk.LEFT, fill=tk.BOTH, expand=tk.TRUE)
+
 scrollbar_normalized_Y.pack(side=tk.LEFT, fill=tk.Y)
 
 # Pack everything
